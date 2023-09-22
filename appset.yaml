@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: application-maker
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - matrix:
+        generators:
+          - clusters:
+              values:
+                repoURL: '{{ (eq (index .metadata.labels "my.org/cluster") "internal") | ternary "https://github.com:443/aperullo/recreate-argocd-15625.git" "https://myrepo.external/gitops.git" }}'
+          - git:
+              repoURL: '{{.values.repoURL}}'
+              requeueAfterSeconds: 20
+              revision: HEAD
+              files:
+                - path: '*/application.yaml'
+  template:
+    metadata:
+      name: '{{.path.basenameNormalized}}'
+    spec:
+      project: default
+      sources:
+        - repoURL: '{{.values.repoURL}}'
+          targetRevision: HEAD
+          path: '{{.path.path}}'
+      destination:
+        server: 'https://kubernetes.default.svc'
+        namespace: default
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - PrunePropagationPolicy=Background
+          - FailOnSharedResource=true

@@ -1,0 +1,4 @@
+applicationSet:
+  image:
+    # repository: argocd
+    tag: v2.8.4   # merge-logging
